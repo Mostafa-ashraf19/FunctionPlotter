@@ -35,8 +35,10 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         self.tabWidget.setTabText(1, 'Function Points')
         self.plotbtn.setEnabled(False)
         self.Resetbtn.setEnabled(False)
+        self.svgraph.setEnabled(False)
         self.plotbtn.clicked.connect(lambda: self.on_plot_click())
         self.Resetbtn.clicked.connect(lambda: self.on_reset_click())
+        self.svgraph.clicked.connect(lambda: self.on_save_graph())
 
     def warning_message(self):
         msg = QMessageBox()
@@ -45,6 +47,19 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         msg.setInformativeText('More information')
         msg.setWindowTitle("Error")
         msg.exec_()
+
+    def on_save_graph(self):
+        """
+        Save graph X, Y points
+        E.g.
+        -2,0,2,.....  # X
+         4,0,4,.....  # Y
+        """
+        f = open(f'function {self.FunArea.text()} values', 'a')
+        f.write(','.join([str(a) for a in self.x_values]))
+        f.write('\n')
+        f.write(','.join([str(a) for a in self.x_values]))
+        f.close()
 
     def on_text_changes(self):
         self.FunArea.textChanged.connect(lambda: self.enable_plot())
@@ -61,6 +76,7 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         self.sc = None
         self.plotbtn.setEnabled(False)
         self.Resetbtn.setEnabled(False)
+        self.svgraph.setEnabled(False)
         self.tableWidget.setRowCount(0)
         self.graph.itemAt(0).widget().deleteLater()
         self.FunArea.clear()
@@ -69,6 +85,8 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         self.Xlabel.clear()
         self.Ylabel.clear()
         self.PlotName.clear()
+        self.y_values = None
+        self.x_values = None
 
     def fill_table(self, x, y):
         xlabel = 'X' if self.Xlabel.text() == "" else self.Xlabel.text()
@@ -105,9 +123,10 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
             self.warning_message()
             return
 
-        x_values = np.arange(min_x, max_x, 0.01)
-        y = np.array([self.sc.eval_fun(val) for val in x_values])
-        self.sc.axes.plot(x_values, y)
+        self.x_values = np.arange(min_x, max_x, 0.01)
+        self.y_values = np.array([self.sc.eval_fun(val)
+                                 for val in self.x_values])
+        self.sc.axes.plot(self.x_values, self.y_values)
 
         xlabel = 'X' if self.Xlabel.text() == "" else self.Xlabel.text()
         ylabel = 'Y' if self.Ylabel.text() == "" else self.Ylabel.text()
@@ -133,8 +152,9 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         # To add into widget.
         self.graph.addWidget(widget)
 
-        self.fill_table(x_values, y)
+        self.fill_table(self.x_values, self.y_values)
         self.Resetbtn.setEnabled(True)
+        self.svgraph.setEnabled(True)
 
 
 def main():
