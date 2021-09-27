@@ -1,10 +1,11 @@
 # Copyright (c) Mostafa Ashraf
+# All Styling follows Google Stylings
 
 # It's a base class of all user interface objects in PyQt.
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.uic import loadUiType
 from PyQt5 import QtCore, QtGui, QtWidgets
-from plotter import MplCanvas
+from plotter import Plotter
 import os
 import sys
 import numpy as np
@@ -17,6 +18,10 @@ OUR_UI = loadUiType(os.path.join(
 
 
 class MainWindow(QtWidgets.QMainWindow, OUR_UI):
+    '''
+    The MainWindow object contains main UI features
+    '''
+
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent=parent)
         self.setupUi(self)
@@ -24,6 +29,14 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         self.on_text_changes()
 
     def initiators(self):
+        '''Initiate the UI
+
+        Args:
+            self (object ptr): Reference of the current object.
+
+        Returns:
+            None
+        '''
         self.setWindowTitle('Function Plotter')
         self.FunArea.setPlaceholderText('Declare Function')
         self.MinX.setPlaceholderText('Min Fun Value')
@@ -41,20 +54,33 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         self.svgraph.clicked.connect(lambda: self.on_save_graph())
 
     def warning_message(self):
+        '''Build a Critical message box.
+
+        Args:
+            self (object ptr): Reference of the current object.
+
+        Returns:
+            QMessageBox: Critical MessageBox
+        '''
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Critical)
         msg.setText("Error")
-        msg.setInformativeText('More information')
+        msg.setInformativeText('Wrong Inputs.')
         msg.setWindowTitle("Error")
         msg.exec_()
 
     def on_save_graph(self):
-        """
-        Save graph X, Y points
+        '''Save graph X, Y points in form
         E.g.
         -2,0,2,.....  # X
          4,0,4,.....  # Y
-        """
+
+        Args:
+            self (object ptr): Reference of the current object.
+
+        Returns:
+            None
+        '''
         f = open(f'function {self.FunArea.text()} values.txt', 'a')
         f.write(','.join([str(a) for a in self.x_values]))
         f.write('\n')
@@ -62,6 +88,14 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         f.close()
 
     def on_text_changes(self):
+        '''connect QlineEdit widgets
+
+        Args:
+            self (object ptr): Reference of the current object.
+
+        Returns:
+            None
+        '''
         self.FunArea.textChanged.connect(lambda: self.enable_plot())
         self.MinX.textChanged.connect(lambda: self.enable_plot())
         self.MaxX.textChanged.connect(lambda: self.enable_plot())
@@ -71,6 +105,14 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
             self.plotbtn.setEnabled(True)
 
     def on_reset_click(self):
+        '''Back widgets to original values.
+
+        Args:
+            self (object ptr): Reference of the current object.
+
+        Returns:
+            None
+        '''
         self.sc.axes.cla()
         self.sc.draw()
         self.sc = None
@@ -89,6 +131,15 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         self.x_values = None
 
     def fill_table(self, x, y):
+        '''Fill table wit X, Y values of function.
+
+        Args:
+            X (list): Range of X
+            Y (list): Result y for certin x
+
+        Returns:
+            None
+        '''
         xlabel = 'X' if self.Xlabel.text() == "" else self.Xlabel.text()
         ylabel = 'Y' if self.Ylabel.text() == "" else self.Ylabel.text()
 
@@ -116,7 +167,15 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         return float(self.MinX.text()), float(self.MaxX.text())
 
     def on_plot_click(self):
-        self.sc = MplCanvas(self)
+        '''Calculate the values of a function for each  X value. Plot the function.
+
+        Args:
+            self (object ptr): Reference of the current object.
+
+        Returns:
+            None
+        '''
+        self.sc = Plotter(self)
 
         min_x, max_x = self.validate_inputs()
         if min_x == False:
