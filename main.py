@@ -55,7 +55,7 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         -2,0,2,.....  # X
          4,0,4,.....  # Y
         """
-        f = open(f'function {self.FunArea.text()} values', 'a')
+        f = open(f'function {self.FunArea.text()} values.txt', 'a')
         f.write(','.join([str(a) for a in self.x_values]))
         f.write('\n')
         f.write(','.join([str(a) for a in self.x_values]))
