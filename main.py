@@ -1,7 +1,7 @@
 # Copyright (c) Mostafa Ashraf
 
 # It's a base class of all user interface objects in PyQt.
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.uic import loadUiType
 from PyQt5 import QtCore, QtGui, QtWidgets
 from plotter import MplCanvas
@@ -21,10 +21,7 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         super(MainWindow, self).__init__(parent=parent)
         self.setupUi(self)
         self.initiators()
-        self.plotbtn.clicked.connect(lambda: self.on_plot_click())
-        self.Resetbtn.clicked.connect(lambda: self.on_reset_click())
-
-        
+        self.on_text_changes()
 
     def initiators(self):
         self.setWindowTitle('Function Plotter')
@@ -34,23 +31,95 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         self.Xlabel.setPlaceholderText('Xlabel Name')
         self.Ylabel.setPlaceholderText('Ylabel Name')
         self.PlotName.setPlaceholderText('Graph Name')
-        self.tabWidget.setTabText(0, 'Function Plate')
+        self.tabWidget.setTabText(0, 'Function Palette')
         self.tabWidget.setTabText(1, 'Function Points')
+        self.plotbtn.setEnabled(False)
+        self.Resetbtn.setEnabled(False)
+        self.plotbtn.clicked.connect(lambda: self.on_plot_click())
+        self.Resetbtn.clicked.connect(lambda: self.on_reset_click())
+
+    def warning_message(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Critical)
+        msg.setText("Error")
+        msg.setInformativeText('More information')
+        msg.setWindowTitle("Error")
+        msg.exec_()
+
+    def on_text_changes(self):
+        self.FunArea.textChanged.connect(lambda: self.enable_plot())
+        self.MinX.textChanged.connect(lambda: self.enable_plot())
+        self.MaxX.textChanged.connect(lambda: self.enable_plot())
+
+    def enable_plot(self):
+        if self.FunArea.text() != "" and self.MinX.text() != "" and self.MaxX.text() != "":
+            self.plotbtn.setEnabled(True)
 
     def on_reset_click(self):
         self.sc.axes.cla()
         self.sc.draw()
+        self.sc = None
+        self.plotbtn.setEnabled(False)
+        self.Resetbtn.setEnabled(False)
+        self.tableWidget.setRowCount(0)
+        self.graph.itemAt(0).widget().deleteLater()
+        self.FunArea.clear()
+        self.MinX.clear()
+        self.MaxX.clear()
+        self.Xlabel.clear()
+        self.Ylabel.clear()
+        self.PlotName.clear()
+
+    def fill_table(self, x, y):
+        xlabel = 'X' if self.Xlabel.text() == "" else self.Xlabel.text()
+        ylabel = 'Y' if self.Ylabel.text() == "" else self.Ylabel.text()
+
+        self.tableWidget.setHorizontalHeaderLabels([xlabel, ylabel])
+        x_len = len(x)
+        self.tableWidget.setRowCount(x_len)
+        for index in range(x_len):
+            self.tableWidget.setItem(
+                index, 0, QtWidgets.QTableWidgetItem(str(x[index])))
+            self.tableWidget.setItem(
+                index, 1, QtWidgets.QTableWidgetItem(str(y[index])))
+
+        self.tableWidget.horizontalHeader().setStretchLastSection(True)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.Stretch)
+
+    def validate_inputs(self):
+        if not self.sc.parse_equation(self.FunArea.text()):
+            return False, 0
+        try:
+            float(self.MinX.text()), float(self.MaxX.text())
+        except ValueError:
+            return False, 0
+
+        return float(self.MinX.text()), float(self.MaxX.text())
 
     def on_plot_click(self):
         self.sc = MplCanvas(self)
 
-        x = np.arange(0, 2, 0.01)
-        y = np.array([self.sc.get_fun(val) for val in x])
-        self.sc.axes.plot(x, y)
+        min_x, max_x = self.validate_inputs()
+        if min_x == False:
+            self.warning_message()
+            return
 
-        #  Create toolbar, passing canvas as first parament,
+        x_values = np.arange(min_x, max_x, 0.01)
+        y = np.array([self.sc.eval_fun(val) for val in x_values])
+        self.sc.axes.plot(x_values, y)
+
+        xlabel = 'X' if self.Xlabel.text() == "" else self.Xlabel.text()
+        ylabel = 'Y' if self.Ylabel.text() == "" else self.Ylabel.text()
+        title = 'Function ' + \
+            self.FunArea.text() if self.PlotName.text() == "" else self.PlotName.text()
+
+        self.sc.axes.set_xlabel(xlabel)
+        self.sc.axes.set_ylabel(ylabel)
+        self.sc.axes.set_title(title)
+
+        # Create toolbar, passing canvas as first parament,
         # parent (self, the MainWindow) as second.
-
         toolbar = NavigationToolbar(self.sc, self)
 
         layout = QtWidgets.QVBoxLayout()
@@ -62,10 +131,10 @@ class MainWindow(QtWidgets.QMainWindow, OUR_UI):
         widget.setLayout(layout)
 
         # To add into widget.
-        self.graph.setContentsMargins(0, 0, 0, 0)
-        lay = QtWidgets.QHBoxLayout(self.graph)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.addWidget(widget)
+        self.graph.addWidget(widget)
+
+        self.fill_table(x_values, y)
+        self.Resetbtn.setEnabled(True)
 
 
 def main():
